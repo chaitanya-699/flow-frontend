@@ -8,7 +8,6 @@ import EmployeeDashboard from './EmployeeDashboard';
 export default function Dashboard() {
   const { role } = useParams();
   const { user } = useAuth();
-  console.log(role);
 
   switch (role) {
     case 'admin':
