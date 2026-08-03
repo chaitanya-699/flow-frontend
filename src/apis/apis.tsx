@@ -12,6 +12,7 @@ export const Login = axios.create({
     'Content-Type': 'application/json',
   },
   withCredentials: true,
+  
 });
 
 export const AutoLogin = axios.create({
