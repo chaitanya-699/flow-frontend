@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { AdminDashboardData } from '../types/types';
-import axios from 'axios';
 import { useAuth } from '../context/useAuth';
 import Loader from './Loader';
+import { DashboardStats } from '../apis/apis';
 
 export default function AdminDashBoard() {
   const { isLoading, setIsLoading } = useAuth();
@@ -12,7 +12,7 @@ export default function AdminDashBoard() {
     const GetDashboardData = async () => {
       try {
         setIsLoading(true);
-        const response = await axios.get<AdminDashboardData>('/api/admin/dashboardstats');
+        const response = await DashboardStats.get<AdminDashboardData>('/admin/dashboardstats');
         setDashboardData(response.data);
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
