@@ -19,7 +19,7 @@ export const AutoLogin = axios.create({
   withCredentials: true,
 });
 
-export const DashboardStats = axios.create({
+export const DashboardStat = axios.create({
   baseURL: BaseUrl,
   withCredentials: true,
 });

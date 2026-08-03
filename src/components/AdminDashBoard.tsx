@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import type { AdminDashboardData } from '../types/types';
 import { useAuth } from '../context/useAuth';
 import Loader from './Loader';
-import { DashboardStats } from '../apis/apis';
+import { DashboardStat } from '../apis/apis';
 
 export default function AdminDashBoard() {
   const { isLoading, setIsLoading } = useAuth();
@@ -12,7 +12,7 @@ export default function AdminDashBoard() {
     const GetDashboardData = async () => {
       try {
         setIsLoading(true);
-        const response = await DashboardStats.get<AdminDashboardData>('/admin/dashboardstats');
+        const response = await DashboardStat.get<AdminDashboardData>('/admin/dashboardstats');
         setDashboardData(response.data);
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
