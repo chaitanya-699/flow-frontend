@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-export const BaseUrl = 'http://localhost:5218/api';
+export const BaseUrl = 'https://flow-backend-fqaqg4c0g6hrb0aw.southindia-01.azurewebsites.net/api';
 export const LoginMe = axios.create({
   baseURL: BaseUrl,
   withCredentials: true,
