@@ -1,33 +1,35 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
 import { useEffect, useState } from 'react';
-import type { User } from '../context/AuthContext';
+import type { UsersData } from '../types/types';
+import { apiAdmin } from '../apis/apis';
 
 export default function ViewUser() {
-  const { isLoading, setIsLoading } = useAuth();
-  const [user, setUser] = useState<User | null>(null);
+  const { isLoading, setIsLoading, user: currentUser } = useAuth();
+  const [userData, setUserData] = useState<UsersData | null>(null);
+  const [errorMsg, setErrorMsg] = useState('');
   const { userId } = useParams();
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchUser = async () => {
+      if (!userId) return;
       setIsLoading(true);
+      setErrorMsg('');
       try {
-        const response = await fetch(`/api/admin/users/${userId}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch user data');
-        }
-        const data = await response.json();
-        setUser(data);
+        const response = await apiAdmin.getUser(userId);
+        setUserData(response.data);
       } catch (error) {
         console.error('Error fetching user:', error);
+        setErrorMsg('Failed to load user profile or user not found.');
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchUser();
-  }, []);
+  }, [userId]);
+
   if (isLoading) {
     return (
       <div className="min-h-[calc(100vh-80px)] bg-slate-50 px-4 py-10 sm:px-6 lg:px-8">
@@ -35,8 +37,8 @@ export default function ViewUser() {
           <div className="flex flex-col items-center gap-4 px-8 py-10 text-center">
             <div className="h-14 w-14 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600" />
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">Loading profile</h1>
-              <p className="mt-1 text-sm text-slate-500">Fetching your account details...</p>
+              <h1 className="text-2xl font-bold text-slate-900">Loading Profile</h1>
+              <p className="mt-1 text-sm text-slate-500">Fetching account details...</p>
             </div>
           </div>
         </div>
@@ -44,23 +46,21 @@ export default function ViewUser() {
     );
   }
 
-  if (!user) {
+  if (errorMsg || !userData) {
     return (
       <div className="min-h-[calc(100vh-80px)] bg-slate-50 px-4 py-10 sm:px-6 lg:px-8">
         <div className="mx-auto flex min-h-[60vh] max-w-5xl items-center justify-center rounded-3xl border border-slate-200/80 bg-white p-8 shadow-sm">
           <div className="max-w-md text-center">
-            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
-              Profile unavailable
-            </h1>
+            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">Profile Unavailable</h1>
             <p className="mt-3 text-sm leading-6 text-slate-500">
-              We could not find an active user session. Please sign in again to view your profile.
+              {errorMsg || 'We could not find details for this user.'}
             </p>
 
             <button
-              onClick={() => navigate('/')}
-              className="mt-6 inline-flex items-center justify-center rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
+              onClick={() => navigate(-1)}
+              className="mt-6 inline-flex items-center justify-center rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 cursor-pointer"
             >
-              Go Home
+              Go Back
             </button>
           </div>
         </div>
@@ -68,11 +68,12 @@ export default function ViewUser() {
     );
   }
 
-  const joinedLabel = new Intl.DateTimeFormat('en-US', {
-    dateStyle: 'medium',
-  }).format(new Date());
+  const joinedLabel = userData.createdAt
+    ? new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(new Date(userData.createdAt))
+    : 'N/A';
 
-  const accountInitial = user.userName?.charAt(0)?.toUpperCase() || 'U';
+  const accountInitial = userData.userName?.charAt(0)?.toUpperCase() || 'U';
+  const isAdmin = currentUser?.role.toLowerCase() === 'admin';
 
   return (
     <div className="min-h-[calc(100vh-80px)] bg-slate-50 px-4 py-8 sm:px-6 lg:px-8">
@@ -86,18 +87,18 @@ export default function ViewUser() {
                 </div>
 
                 <div>
-                  <p className="text-sm font-medium text-white/80">Profile</p>
-                  <h1 className="text-3xl font-black tracking-tight sm:text-4xl">
-                    {user.userName}
-                  </h1>
-                  <p className="mt-2 text-sm text-white/80">{user.role} account</p>
+                  <p className="text-sm font-medium text-white/80">User Profile</p>
+                  <h1 className="text-3xl font-black tracking-tight sm:text-4xl">{userData.userName}</h1>
+                  <p className="mt-2 text-sm text-white/80">
+                    <span className="capitalize">{userData.role}</span> account • {userData.email}
+                  </p>
                 </div>
               </div>
 
               <div className="flex flex-wrap gap-3">
                 <button
                   onClick={() => navigate(-1)}
-                  className="rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/20"
+                  className="rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/20 cursor-pointer"
                 >
                   Back
                 </button>
@@ -108,75 +109,90 @@ export default function ViewUser() {
           <div className="grid gap-6 p-6 sm:p-8 lg:grid-cols-[1.4fr_0.9fr]">
             <div className="space-y-6">
               <div className="rounded-2xl border border-slate-200/80 bg-slate-50 p-5 sm:p-6">
-                <h2 className="text-lg font-bold text-slate-900">Account Details</h2>
+                <h2 className="text-lg font-bold text-slate-900">Account Information</h2>
 
                 <div className="mt-5 grid gap-4 sm:grid-cols-2">
                   <div className="rounded-xl bg-white p-4 shadow-sm">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                      Full Name
-                    </p>
-                    <p className="mt-2 text-sm font-semibold text-slate-900">{user.userName}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Username</p>
+                    <p className="mt-2 text-sm font-semibold text-slate-900">{userData.userName}</p>
                   </div>
 
                   <div className="rounded-xl bg-white p-4 shadow-sm">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                      Email
-                    </p>
-                    <p className="mt-2 break-all text-sm font-semibold text-slate-900">
-                      {user.email}
-                    </p>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Email</p>
+                    <p className="mt-2 break-all text-sm font-semibold text-slate-900">{userData.email}</p>
                   </div>
 
                   <div className="rounded-xl bg-white p-4 shadow-sm">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                      Role
-                    </p>
-                    <p className="mt-2 text-sm font-semibold text-slate-900">{user.role}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Role</p>
+                    <p className="mt-2 text-sm font-semibold text-slate-900">{userData.role}</p>
                   </div>
 
                   <div className="rounded-xl bg-white p-4 shadow-sm">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                      Member Since
-                    </p>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Joined</p>
                     <p className="mt-2 text-sm font-semibold text-slate-900">{joinedLabel}</p>
                   </div>
+
+                  {userData.position && (
+                    <div className="rounded-xl bg-white p-4 shadow-sm">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Position</p>
+                      <p className="mt-2 text-sm font-semibold text-slate-900">{userData.position}</p>
+                    </div>
+                  )}
+
+                  {userData.currentManager && (
+                    <div className="rounded-xl bg-white p-4 shadow-sm">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Manager</p>
+                      <p className="mt-2 text-sm font-semibold text-slate-900">{userData.currentManager}</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-slate-200/80 bg-white p-5 sm:p-6 shadow-sm">
-                <h2 className="text-lg font-bold text-slate-900">Profile Summary</h2>
-                <p className="mt-3 text-sm leading-6 text-slate-600">
-                  This account is set up for the {user.role.toLowerCase()} workspace. Use this page
-                  to review your identity, confirm your access level, and jump back to your
-                  dashboard.
-                </p>
-              </div>
+              {/* Projects Managed / Tasks Assigned */}
+              {userData.projectNames && userData.projectNames.length > 0 && (
+                <div className="rounded-2xl border border-slate-200/80 bg-white p-5 sm:p-6 shadow-sm">
+                  <h2 className="text-lg font-bold text-slate-900 mb-3">Managed Projects</h2>
+                  <div className="flex flex-wrap gap-2">
+                    {userData.projectNames.map((name, idx) => (
+                      <span key={idx} className="rounded-lg bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 border border-blue-100">
+                        📁 {name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {userData.tasks && userData.tasks.length > 0 && (
+                <div className="rounded-2xl border border-slate-200/80 bg-white p-5 sm:p-6 shadow-sm">
+                  <h2 className="text-lg font-bold text-slate-900 mb-3">Assigned Tasks ({userData.tasks.length})</h2>
+                  <div className="space-y-2">
+                    {userData.tasks.map(task => (
+                      <div key={task.id} className="flex items-center justify-between rounded-xl border border-slate-100 p-3 bg-slate-50/50">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-800">{task.taskName}</p>
+                          <p className="text-xs text-slate-500">{task.description}</p>
+                        </div>
+                        <span className="rounded-full px-2.5 py-0.5 text-xs font-semibold bg-blue-100 text-blue-800">
+                          {task.status}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <aside className="space-y-6">
               <div className="rounded-2xl border border-slate-200/80 bg-white p-5 sm:p-6 shadow-sm">
                 <h2 className="text-lg font-bold text-slate-900">Quick Actions</h2>
-
                 <div className="mt-4 space-y-3">
                   <button
-                    onClick={() => navigate(`/dashboard/${user.role.toLowerCase()}`)}
-                    className="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
+                    onClick={() => navigate(isAdmin ? '/dashboard/admin' : '/')}
+                    className="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 transition cursor-pointer"
                   >
                     Go to Dashboard
                   </button>
                 </div>
-              </div>
-
-              <div className="rounded-2xl border border-slate-200/80 bg-slate-900 p-5 sm:p-6 text-white shadow-sm">
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                  Security
-                </p>
-                <h3 className="mt-2 text-xl font-bold">Keep your account safe</h3>
-                <ul className="mt-4 space-y-2 text-sm text-slate-300">
-                  <li>• Use a strong password and rotate it regularly.</li>
-                  <li>• Review your role permissions before making changes.</li>
-                  <li>• Log out when using a shared device.</li>
-                </ul>
               </div>
             </aside>
           </div>

@@ -31,7 +31,7 @@ export default function RoleLogin({ role }: Props) {
       });
 
       login(response.data.user);
-      navigate(`/dashboard/${role.toLocaleLowerCase()}`);
+      navigate(`/dashboard/${role.toLowerCase()}`);
     } catch (err: unknown) {
       const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
       setError(message || 'Invalid username or password.');
